@@ -23,41 +23,36 @@ func increment(clock *VectorClock, nodes ...int) {
 }
 
 func TestVectorClock_Compare(t *testing.T) {
-	result, err := getClock().Compare(getClock())
+
+	res, err := getClock().Compare(getClock())
 	assert.NoError(t, err)
-	assert.NotEqual(t, CONCURRENTLY, result)
+	assert.NotEqual(t, res, CONCURRENTLY)
 
-	result, err = getClock(1, 1, 2).Compare(getClock(1, 1, 2))
+	res, err = getClock(1, 1, 2).Compare(getClock(1, 1, 2))
 	assert.NoError(t, err)
-	assert.NotEqual(t, CONCURRENTLY, result)
+	assert.NotEqual(t, res, CONCURRENTLY)
 
-	result, err = getClock(1, 1, 2).Compare(getClock(1, 1, 2, 3))
+	res, err = getClock(1, 1, 2).Compare(getClock(1, 1, 2, 3))
 	assert.NoError(t, err)
-	assert.Equal(t, BEFORE, result)
+	assert.Equal(t, res, BEFORE)
 
-	result, err = getClock(1).Compare(getClock(2))
+	// Clocks with different events should be concurrent.
+	res, err = getClock(1).Compare(getClock(2))
 	assert.NoError(t, err)
-	assert.Equal(t, CONCURRENTLY, result)
+	assert.Equal(t, res, CONCURRENTLY)
 
-	result, err = getClock(1, 1, 2).Compare(getClock(1, 1, 3))
+	// Clocks with different events should be concurrent
+	res, err = getClock(1, 2, 3, 3).Compare(getClock(1, 1, 2, 3))
 	assert.NoError(t, err)
-	assert.Equal(t, CONCURRENTLY, result)
+	assert.Equal(t, res, AFTER)
 
-	result, err = getClock(1, 2, 3, 3).Compare(getClock(1, 1, 2, 3))
+	res, err = getClock(2, 2).Compare(getClock(1, 2, 2, 3))
 	assert.NoError(t, err)
-	assert.Equal(t, CONCURRENTLY, result)
+	assert.Equal(t, res, BEFORE)
 
-	/*
-		TODO - Investigate case logic looks correct
-			result, err := getClock(2, 2).Compare(getClock(1, 1, 2, 3))
-			assert.NoError(t, err)
-			assert.Equal(t, BEFORE, result)
-
-	*/
-
-	result, err = getClock(1, 2, 2, 3).Compare(getClock(2, 2))
+	res, err = getClock(1, 2, 2, 3).Compare(getClock(2, 2))
 	assert.NoError(t, err)
-	assert.Equal(t, AFTER, result)
+	assert.Equal(t, res, AFTER)
 }
 
 func TestVectorClock_CompareVersion(t *testing.T) {

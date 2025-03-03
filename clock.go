@@ -41,41 +41,68 @@ func (v *VectorClock) Clone() *VectorClock {
 	return clone
 }
 
+func commonNodes(clocks ...*VectorClock) map[uint16]interface{} {
+	result := map[uint16]int{}
+	for _, clock := range clocks {
+		for k, _ := range clock.versionMap {
+			_, ok := result[k]
+			if ok {
+				result[k] += 1
+			} else {
+				result[k] = 1
+			}
+		}
+	}
+
+	filteredResult := map[uint16]interface{}{}
+	for k, v := range result {
+		if v == len(clocks) {
+			filteredResult[k] = nil
+		}
+	}
+	return filteredResult
+}
+
 func (v *VectorClock) Compare(other *VectorClock) (Occurred, error) {
 	if v == nil || other == nil {
 		return BEFORE, errors.New("cant compare null clocks")
 	}
-	vBigger := false
-	otherBigger := false
+	v1Bigger := false
+	v2Bigger := false
 
-	for k, versionV := range v.versionMap {
-		if versionOther, exists := other.versionMap[k]; exists {
-			if versionV > versionOther {
-				vBigger = true
-			} else if versionV < versionOther {
-				otherBigger = true
-			}
-		} else {
-			vBigger = true
+	sharedNodes := commonNodes(v, other)
+
+	if len(v.versionMap) > len(sharedNodes) {
+		v1Bigger = true
+	}
+
+	if len(other.versionMap) > len(sharedNodes) {
+		v2Bigger = true
+	}
+
+	for nodeId, _ := range sharedNodes {
+
+		if v1Bigger && v2Bigger {
+			break
+		}
+		v1Version := v.versionMap[nodeId]
+		v2Version := other.versionMap[nodeId]
+		if v1Version > v2Version {
+			v1Bigger = true
+		} else if v1Version < v2Version {
+			v1Bigger = true
 		}
 	}
 
-	for k := range other.versionMap {
-		if _, exists := v.versionMap[k]; !exists {
-			otherBigger = true
-		}
-	}
-
-	if !vBigger && otherBigger {
+	if !v1Bigger && !v2Bigger {
 		return BEFORE, nil
-	}
-	if vBigger && !otherBigger {
+	} else if v1Bigger && !v2Bigger {
 		return AFTER, nil
-	}
-	if vBigger && otherBigger {
+	} else if !v1Bigger && v2Bigger {
+		return BEFORE, nil
+	} else {
 		return CONCURRENTLY, nil
 	}
-	return BEFORE, nil // Equal case
 }
 
 func (v *VectorClock) Merge(clock *VectorClock) *VectorClock {
