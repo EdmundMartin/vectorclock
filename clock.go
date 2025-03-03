@@ -43,6 +43,7 @@ func (v *VectorClock) Clone() *VectorClock {
 
 func commonNodes(clocks ...*VectorClock) map[uint16]interface{} {
 	result := map[uint16]int{}
+	filteredResult := map[uint16]interface{}{}
 	for _, clock := range clocks {
 		for k, _ := range clock.versionMap {
 			_, ok := result[k]
@@ -51,13 +52,9 @@ func commonNodes(clocks ...*VectorClock) map[uint16]interface{} {
 			} else {
 				result[k] = 1
 			}
-		}
-	}
-
-	filteredResult := map[uint16]interface{}{}
-	for k, v := range result {
-		if v == len(clocks) {
-			filteredResult[k] = nil
+			if result[k] == len(clocks) {
+				filteredResult[k] = nil
+			}
 		}
 	}
 	return filteredResult
